@@ -1,4 +1,4 @@
-// exception.cc 
+// exception.cc
 //	Entry point into the Nachos kernel from user programs.
 //	There are two kinds of things that can cause control to
 //	transfer back to here from user code:
@@ -9,7 +9,7 @@
 //
 //	exceptions -- The user code does something that the CPU can't handle.
 //	For instance, accessing memory that doesn't exist, arithmetic errors,
-//	etc.  
+//	etc.
 //
 //	Interrupts (which can also cause control to transfer from user
 //	code into the Nachos kernel) are handled elsewhere.
@@ -18,7 +18,7 @@
 // Everything else core dumps.
 //
 // Copyright (c) 1992-1993 The Regents of the University of California.
-// All rights reserved.  See copyright.h for copyright notice and limitation 
+// All rights reserved.  See copyright.h for copyright notice and limitation
 // of liability and disclaimer of warranty provisions.
 
 #define FALSE  0
@@ -34,6 +34,7 @@
 #include "nachostabla.h"
 
     NachosOpenFilesTable* tabla = new NachosOpenFilesTable();
+    char bufferString[2048];
 //----------------------------------------------------------------------
 // ExceptionHandler
 // 	Entry point into the Nachos kernel.  Called when a user program
@@ -48,12 +49,12 @@
 //		arg3 -- r6
 //		arg4 -- r7
 //
-//	The result of the system call, if any, must be put back into r2. 
+//	The result of the system call, if any, must be put back into r2.
 //
 // And don't forget to increment the pc before returning. (Or else you'll
 // loop making the same system call forever!
 //
-//	"which" is the kind of exception.  The list of possible exceptions 
+//	"which" is the kind of exception.  The list of possible exceptions
 //	are in machine.h.
 //----------------------------------------------------------------------
 
@@ -85,15 +86,46 @@ void Nachos_Exit(int status){
 }
 
 void Nachos_Exec(){
-    
+
 }
 
 void Nachos_Join(){
-    
+
 }
-    
+
+/**
+    System call encargado de la creacion de archivos
+    en el sistema NachOS, utiliza un metodo externo
+    extraerMensajeRegistro para obtener elementos del registro 4
+
+**/
+
 void Nachos_Create(){
-    
+    int temporal = 4;
+    extraerMensajeRegistro(temporal);
+    temporal = creat(bufferString, S_IRUSR | S_IWUSR);
+    if(temporal < 0 ){            // Se verifica la creacion correcta del archivo
+        perror("Error al crear el archivo");
+        }else{
+        temporal = currentThread->tabla.Open(temporal);
+        currentThread->tabla.addThread();
+    }
+    returnFromSystemCall();
+}
+
+void extraerMensajeRegistro(int registro){
+    int direccionM = machine->ReadRegister(registro);    // Se obtiene la direccion de memoria del parametro
+    int letra;                        // Caracter al que se le aplica casting a char para el buffer
+    bool continuar = true;
+    char temporal = 'a';
+    for(int j = 0; continuar; ++j){
+        if(temporal != '\0'){
+            machine->ReadMem(direccionM+j, 1, &letra);        // Se lee a partir de la direccion de memoria obtenida
+            bufferString[j] = (char) letra;                // y se castea para el buffer
+        }else{
+            continuar = false;
+        }
+    }
 }
 
 void Nachos_Open() {                    // System call 5
@@ -106,10 +138,10 @@ void Nachos_Open() {                    // System call 5
 		machine->ReadMem(valor, 1, &letra);
 		buffer[i] = (char)letra;
 		if((char) letra != '\0'){
-			seguir = false;	
+			seguir = false;
 		}
 	}
-	//tabla.Open(); 
+	//tabla.Open();
 	// Read the name from the user memory, see 4 below
 	// Use NachosOpenFilesTable class to create a relationship
 	// between user file and unix file
@@ -118,19 +150,19 @@ void Nachos_Open() {                    // System call 5
 }       // Nachos_Open
 
 
-void Nachos_Open(){
-    
+void Nachos_Open(){   //system call 7
+
 }
 
 void Nachos_Read(){
-    
+
 }
 
-void Nachos_Write() {                   
+void Nachos_Write() {
 
-    int size = machine->ReadRegister( 5 );    
+    int size = machine->ReadRegister( 5 );
 
-    OpenFileId id = machine->ReadRegister( 6 );	
+    OpenFileId id = machine->ReadRegister( 6 );
     int indiceUnix = tabla->getUnixHandle(id);
 
 
@@ -148,7 +180,7 @@ void Nachos_Write() {
     }
     switch (id) {
 
-    case  ConsoleInput:	
+    case  ConsoleInput:
         machine->WriteRegister( 2, -1 );
         break;
     case  ConsoleOutput:
@@ -156,7 +188,7 @@ void Nachos_Write() {
         stats->numConsoleCharsWritten++;
         printf( "%s \n", buffer );
         break;
-    case ConsoleError: 
+    case ConsoleError:
         printf( "%d\n", machine->ReadRegister( 4 ) );
         break;
     default:
@@ -171,10 +203,10 @@ void Nachos_Write() {
         }
     }
     returnFromSystemCall();
-} 
+}
 
 void Nachos_Close(){
-    
+
 }
 
 void Nachos_Fork() {    		// System call 9
@@ -227,23 +259,23 @@ void NachosForkThread( int p ) {
 
 
 void Nachos_Yield(){
-    
+
 }
 
 void Nachos_SemCreate(){
-    
+
 }
 
 void Nachos_SemDestroy(){
-    
+
 }
 
 void Nachos_SemSignal(){
-    
+
 }
 
 void Nachos_SemWait(){
-    
+
 }
 
 
@@ -272,7 +304,7 @@ void ExceptionHandler(ExceptionType which)
 	     case SC_Create:
 		Nachos_Create();                    // System call #4
 		break;
-             case SC_Open:	
+             case SC_Open:
                 Nachos_Open();             // System call # 5
                 break;
 	     case SC_Read:
@@ -283,8 +315,8 @@ void ExceptionHandler(ExceptionType which)
                 break;
 	     case SC_Close:
 		Nachos_Close();                     // System call #8
-		break;                
-             case SC_Fork:		   
+		break;
+             case SC_Fork:
                 Nachos_Fork();              // System call #9
                 break;
 	     case SC_Yield:
