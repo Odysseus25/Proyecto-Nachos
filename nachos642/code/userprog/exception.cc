@@ -76,58 +76,28 @@ void Nachos_Halt() {                    // System call 0
 
 }       // Nachos_Halt
 
-// Pass the user routine address as a parameter for this function
-// This function is similar to "StartProcess" in "progtest.cc" file under "userprog"
-// Requires a correct AddrSpace setup to work well
+// Se encarga de cerrar el hilo actual, sin apagar toda la maquina
+void Nachos_Exit(int status){
 
-void NachosForkThread( int p ) {
-
-    AddrSpace *space;
-
-    space = currentThread->space;
-    space->InitRegisters();             // set the initial register values
-    space->RestoreState();              // load page table register
-
-// Set the return address for this thread to the same as the main thread
-// This will lead this thread to call the exit system call and finish
-    machine->WriteRegister( RetAddrReg, 4 );
-
-    machine->WriteRegister( PCReg, p );
-    machine->WriteRegister( NextPCReg, p + 4 );
-
-    machine->Run();                     // jump to the user progam
-    ASSERT(FALSE);
-
+	int processid = currentThread->space->pcb->pid;
+	currentThread->space->pcb->status = status;
+	currentThread->Finish();
 }
 
+void Nachos_Exec(){
+    
+}
 
-void Nachos_Fork() {			// System call 9
-
-	DEBUG( 'u', "Entering Fork System call\n" );
-	// We need to create a new kernel thread to execute the user thread
-	Thread * newT = new Thread( "child to execute Fork code" );
-
-	// We need to share the Open File Table structure with this new child
-
-	// Child and father will also share the same address space, except for the stack
-	// Text, init data and uninit data are shared, a new stack area must be created
-	// for the new child
-	// We suggest the use of a new constructor in AddrSpace class,
-	// This new constructor will copy the shared segments (space variable) from currentThread, passed
-	// as a parameter, and create a new stack for the new child
-	newT->space = new AddrSpace( currentThread->space );
-
-	// We (kernel)-Fork to a new method to execute the child code
-	// Pass the user routine address, now in register 4, as a parameter
-	newT->Fork( NachosForkThread, machine->ReadRegister( 4 ) );
-
-	returnFromSystemCall();	// This adjust the PrevPC, PC, and NextPC registers
-
-	DEBUG( 'u', "Exiting Fork System call\n" );
-}	// Kernel_Fork
+void Nachos_Join(){
+    
+}
+    
+void Nachos_Create(){
+    
+}
 
 void Nachos_Open() {                    // System call 5
-	int valor = machine->ReadRegister(4);
+    int valor = machine->ReadRegister(4);
 	int letra;
 	char buffer[100];	//queda guardado el mensaje del registro
 	bool seguir;
@@ -147,9 +117,18 @@ void Nachos_Open() {                    // System call 5
 
 }       // Nachos_Open
 
+
+void Nachos_Open(){
+    
+}
+
+void Nachos_Read(){
+    
+}
+
 void Nachos_Write() {                   
 
-    int size = machine->ReadRegister( 5 );	
+    int size = machine->ReadRegister( 5 );    
 
     OpenFileId id = machine->ReadRegister( 6 );	
     int indiceUnix = tabla->getUnixHandle(id);
@@ -194,6 +173,82 @@ void Nachos_Write() {
     returnFromSystemCall();
 } 
 
+void Nachos_Close(){
+    
+}
+
+void Nachos_Fork() {    		// System call 9
+
+	DEBUG( 'u', "Entering Fork System call\n" );
+	// We need to create a new kernel thread to execute the user thread
+	Thread * newT = new Thread( "child to execute Fork code" );
+
+	// We need to share the Open File Table structure with this new child
+
+	// Child and father will also share the same address space, except for the stack
+	// Text, init data and uninit data are shared, a new stack area must be created
+	// for the new child
+	// We suggest the use of a new constructor in AddrSpace class,
+	// This new constructor will copy the shared segments (space variable) from currentThread, passed
+	// as a parameter, and create a new stack for the new child
+	newT->space = new AddrSpace( currentThread->space );
+
+	// We (kernel)-Fork to a new method to execute the child code
+	// Pass the user routine address, now in register 4, as a parameter
+	newT->Fork( NachosForkThread, machine->ReadRegister( 4 ) );
+
+	returnFromSystemCall();	// This adjust the PrevPC, PC, and NextPC registers
+
+	DEBUG( 'u', "Exiting Fork System call\n" );
+}	// Kernel_Fork
+
+// Pass the user routine address as a parameter for this function
+// This function is similar to "StartProcess" in "progtest.cc" file under "userprog"
+// Requires a correct AddrSpace setup to work well
+
+void NachosForkThread( int p ) {
+
+    AddrSpace *space;
+
+    space = currentThread->space;
+    space->InitRegisters();             // set the initial register values
+    space->RestoreState();              // load page table register
+
+// Set the return address for this thread to the same as the main thread
+// This will lead this thread to call the exit system call and finish
+    machine->WriteRegister( RetAddrReg, 4 );
+
+    machine->WriteRegister( PCReg, p );
+    machine->WriteRegister( NextPCReg, p + 4 );
+
+    machine->Run();                     // jump to the user progam
+    ASSERT(FALSE);
+}
+
+
+void Nachos_Yield(){
+    
+}
+
+void Nachos_SemCreate(){
+    
+}
+
+void Nachos_SemDestroy(){
+    
+}
+
+void Nachos_SemSignal(){
+    
+}
+
+void Nachos_SemWait(){
+    
+}
+
+
+
+
 void ExceptionHandler(ExceptionType which)
 {
     int type = machine->ReadRegister(2);
@@ -203,18 +258,50 @@ void ExceptionHandler(ExceptionType which)
        case SyscallException:
           switch ( type ) {
              case SC_Halt:
-                Nachos_Halt();             // System call # 0
+                Nachos_Halt();              // System call # 0
                 break;
-             case SC_Open:	//hacer este que recupera el nombre del archivo del registro 4 caracter por caracter, 
+	     case SC_Exit:
+		Nachos_Exit();                      // System call #1
+		break;
+	     case SC_Exec:
+		Nachos_Exec();                      // System call #2
+		break;
+	     case SC_Join:
+		Nachos_Join();                      // System call #3
+		break;
+	     case SC_Create:
+		Nachos_Create();                    // System call #4
+		break;
+             case SC_Open:	
                 Nachos_Open();             // System call # 5
                 break;
+	     case SC_Read:
+		Nachos_Read();                      // System call #6
+		break;
              case SC_Write:
-                Nachos_Write();             // System call # 7
-                break;                
-             case SC_Fork:		// System call # 9
-                Nachos_Fork();
+                Nachos_Write();             // System call #7
                 break;
-
+	     case SC_Close:
+		Nachos_Close();                     // System call #8
+		break;                
+             case SC_Fork:		   
+                Nachos_Fork();              // System call #9
+                break;
+	     case SC_Yield:
+		Nachos_Yield();                     // System call #10
+		break;
+	     case SC_SemCreate:
+		Nachos_SemCreate();                 // System call #11
+		break;
+	     case SC_SemDestroy:
+		Nachos_SemDestroy();                // System call #12
+		break;
+	     case SC_SemSignal:
+		Nachos_SemSignal();                 // System call #13
+		break;
+	     case SC_SemWait:
+		Nachos_SemWait();                   // System call #14
+		break;
              default:
                 printf("Unexpected syscall exception %d\n", type );
                 ASSERT(FALSE);
