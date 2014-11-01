@@ -33,9 +33,17 @@
 #include "../threads/utility.h"
 #include "nachostabla.h"
 
-    NachosOpenFilesTable* tabla = new NachosOpenFilesTable();
-    char bufferString[50];
-    Semaphore * consola = new Semaphore("Semaforo de consola", 1);
+/**
+ * 	Universidad de Costa Rica
+ * 	Sistemas Operativos
+ * 	Profesor: Francisco Arroyo
+ * 	Estudiantes: José Pablo Ureña Gutierrez B16692, Ulises Gonzáles Zúñiga  B12989
+
+**/
+
+    NachosOpenFilesTable* tabla = new NachosOpenFilesTable();		// Tabla que maneja un listado de archivos abiertos
+    char bufferString[50];						// Buffer que almacena mensajes leidos de registro
+    Semaphore * consola = new Semaphore("Semaforo de consola", 1);	
     char mensajeLeido[300];
 //----------------------------------------------------------------------
 // ExceptionHandler
@@ -72,6 +80,10 @@ void returnFromSystemCall() {
 
 }       // returnFromSystemCall
 
+/**
+ * 	System call 0 encargado de detener el sistema NachOS, finalizar los
+ * 	hilos actuales y terminar los procesos. 
+**/
 void Nachos_Halt() {                    // System call 0
 
         DEBUG('a', "Shutdown, initiated by user program.\n");
@@ -79,7 +91,12 @@ void Nachos_Halt() {                    // System call 0
 
 }       // Nachos_Halt
 
-// Se encarga de cerrar el hilo actual, sin apagar toda la maquina
+
+/**
+ * 	System call 1 encargado de finalizar el hilo actual sin terminar
+ * 	todos los procesos del sistema NachOS. Sin embargo, si existe un 
+ * 	unico proceso en ejecucion finaliza el sistema NachOS.
+**/
 void Nachos_Exit(int status){
 
 	int processid = currentThread->space->pcb->pid;
@@ -87,10 +104,21 @@ void Nachos_Exit(int status){
 	currentThread->Finish();
 }
 
+/**
+ * 	System call 2 encargado de tomar un ejecutable (archivo) 
+ * 	y cargarlo en un address space, para proceder a la ejecucion
+ * 	e insercion de datos del hilo actual a la tabla de procesos.
+**/
 void Nachos_Exec(){
 
 }
 
+/**
+ * 	System call 3 encargado de hallar el proceso o hilo con el 
+ * 	id que recibe por parámetro, y poner en espera al hilo hasta
+ * 	que finalice dicho proceso.
+ * 	
+**/
 void Nachos_Join(){
     SpaceId pid  = machine->ReadRegister(4); 				// identificador del proceso
     Thread * hilito;
@@ -102,13 +130,13 @@ void Nachos_Join(){
     //currentThread->Finish();
 }
 
+
 /**
-    System call encargado de la creacion de archivos
+    System call 4 encargado de la creacion de archivos
     en el sistema NachOS, utiliza un metodo externo
     extraerMensajeRegistro para obtener elementos del registro 4
 
 **/
-
 void Nachos_Create(){
     int temporal = 4;
     extraerMensajeRegistro(temporal);
@@ -122,6 +150,12 @@ void Nachos_Create(){
     returnFromSystemCall();
 }
 
+
+/**
+ * 	Metodo compartido entre varios metodos de exception.cc
+ * 	encargado de leer el registro que obtiene por parametro,
+ * 	y sobreescribir en un buffer el mensaje recopilado de memoria.
+**/
 void extraerMensajeRegistro(int registro){
     int direccionM = machine->ReadRegister(registro);    // Se obtiene la direccion de memoria del parametro
     int letra;                        // Caracter al que se le aplica casting a char para el buffer
@@ -137,19 +171,13 @@ void extraerMensajeRegistro(int registro){
     }
 }
 
-void Nachos_Open() {                    // System call 5
-    int valor = machine->ReadRegister(4);
-	int letra;
-	char buffer[100];	//queda guardado el mensaje del registro
-	bool seguir;
-	int i = 0;
-	while(seguir == true){
-		machine->ReadMem(valor, 1, &letra);
-		buffer[i] = (char)letra;
-		if((char) letra != '\0'){
-			seguir = false;
-		}
-	}
+
+/**
+ * 	System call 5 encargado de abrir un archivo y agregar su id
+ * 	a la tabla de archivos abiertos.
+**/
+void Nachos_Open() {                    
+    
 	//tabla.Open();
 	// Read the name from the user memory, see 4 below
 	// Use NachosOpenFilesTable class to create a relationship
@@ -158,10 +186,15 @@ void Nachos_Open() {                    // System call 5
 
 }       // Nachos_Open
 
-void Nachos_Read(){ //system call #7
-    int direccionEnArchivo = machine->ReadRegister(4); //el archivo de donde se va a leer
-    int tamano = machine->ReadRegister(5); // tamano de los que se va a leer
-    OpenFileId ID = machineReadRegister(6); //descriptor del archivo a leer
+
+/**
+ * 	System call 6 encargado de la lectura de un archivo cargado en la 
+ * 	memoria previamente, al hacer uso de los registros 4, 5 y 6.
+**/
+void Nachos_Read(){ 
+    int direccionEnArchivo = machine->ReadRegister(4); 				// El archivo de donde se va a leer
+    int tamano = machine->ReadRegister(5); 					// Tamano de los que se va a leer
+    OpenFileId ID = machineReadRegister(6); 					// Descriptor del archivo a leer
 
     int numBytes = 0;
     char * temp;
@@ -198,6 +231,12 @@ void Nachos_Read(){ //system call #7
     returnFromSystemCall();
 }
 
+
+/**
+ * 	System call 7 encargado de encontrar el archivo necesario en el cual 
+ * 	se sobreescribiran datos, posteriormente se procede a la escritura
+ * 	en el archivo por el metodo propio de Unix "write".
+**/
 void Nachos_Write() {
 
     int size = machine->ReadRegister( 5 );
@@ -246,13 +285,13 @@ void Nachos_Write() {
     returnFromSystemCall();
 }
 
+
 /**
-    System call encargado de cerrar o finalizar un archivo
+    System call 8 encargado de cerrar o finalizar un archivo
     que se encuentre abierto en el sistema NachOS. Esto lo
     realiza leyendo del registro 6 para encontrar el ID
     del mismo.
 **/
-
 void Nachos_Close(){
     int lecturaRegistro = machine->ReadRegister(6);
     int resultado = currentThread->tabla->Close(lecturaRegistro);                // Se obtiene el numero archivo deseado para eliminar
@@ -266,7 +305,13 @@ void Nachos_Close(){
     returnFromSystemCall();
 }
 
-void Nachos_Fork() {    		// System call 9
+
+/**
+ * 	System call 9 encargado de recibir una referencia a un metodo, 
+ * 	en donde se abre un nuevo hilo hijo del hijo padre para proceder
+ * 	con su ejecucion.
+**/
+void Nachos_Fork() {    	
 
 	DEBUG( 'u', "Entering Fork System call\n" );
 	// We need to create a new kernel thread to execute the user thread
@@ -315,35 +360,61 @@ void NachosForkThread( int p ) {
 }
 
 
-v/**
-    System call encargado de colocar el hilo actual en espera
+/**
+    System call 10 encargado de colocar el hilo actual en espera
     y permitir al CPU que ejecute otros hilos en espera.
 **/
-
 void Nachos_Yield(){
     currentThread->Yield();
     returnFromSystemCall;
 }
 
-void Nachos_SemCreate(){
 
+/**
+ * 	System call 11 encargado de crear un nuevo semaforo
+ * 	para el hilo de ejecucion actual.
+**/
+void Nachos_SemCreate(){
+	
 }
 
+
+/**
+ * 	System call 12 encargado de eliminar el semaforo
+ * 	para el hilo de ejecucion actual.
+**/
 void Nachos_SemDestroy(){
 
 }
 
+
+/**
+ * 	System call 13 encargado de generar una señal proveniente
+ * 	del hilo actual que es recibida por semaforos en espera
+ * 	ejecutandose de forma paralela.
+**/
 void Nachos_SemSignal(){
 
 }
 
+
+/**
+ * 	System call 14 encargado de generar una señal de espera
+ *      proveniente del hilo actual, el cual espera hasta recibir
+ * 	una señal proveniente de otro semaforo de hilo en ejecucion.
+**/
 void Nachos_SemWait(){
 
 }
 
 
-
-
+/**
+ * 	Metodo principal de exception.cc, encargado de obtener por 
+ * 	parametro el system call solicitado, en donde por medio de 
+ * 	un switch y variables definidas previamente, se realizan los
+ * 	llamados a metodos especificos que ejecutan un determinado
+ * 	system call. 
+**/
 void ExceptionHandler(ExceptionType which)
 {
     int type = machine->ReadRegister(2);
