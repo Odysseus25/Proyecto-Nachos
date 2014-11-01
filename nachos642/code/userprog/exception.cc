@@ -92,7 +92,14 @@ void Nachos_Exec(){
 }
 
 void Nachos_Join(){
-
+    SpaceId pid  = machine->ReadRegister(4); 				// identificador del proceso
+    Thread * hilito;
+    hilito = TablaIndicadores->getThread(pid);
+    //DEBUG('z', "Join System call id(%d) \n", pid);
+    Semaphore *s = new Semaphore("Hilo", 0); //estado inicial = wait
+    hilito->Join(s);
+    s->P();
+    //currentThread->Finish();
 }
 
 /**
@@ -187,7 +194,7 @@ void Nachos_Read(){ //system call #7
             }
     }
     consola->V();
-    machine->WriteMem(direccionEnArchivo, tamano, temp); //escribe en memoria
+  //machine->WriteMem(direccionEnArchivo, tamano, temp); //escribe en memoria
     returnFromSystemCall();
 }
 
