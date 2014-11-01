@@ -34,7 +34,9 @@
 #include "nachostabla.h"
 
     NachosOpenFilesTable* tabla = new NachosOpenFilesTable();
-    char bufferString[2048];
+    char bufferString[50];
+    Semaphore * consola = new Semaphore("Semaforo de consola", 1);
+    char mensajeLeido[300];
 //----------------------------------------------------------------------
 // ExceptionHandler
 // 	Entry point into the Nachos kernel.  Called when a user program
@@ -150,12 +152,45 @@ void Nachos_Open() {                    // System call 5
 }       // Nachos_Open
 
 
-void Nachos_Open(){   //system call 7
+void Nachos_Open(){
 
 }
 
-void Nachos_Read(){
+void Nachos_Read(){ //system call #7
+    int direccionEnArchivo = machine->ReadRegister(4); //el archivo de donde se va a leer
+    int tamano = machine->ReadRegister(5); // tamano de los que se va a leer
+    OpenFileId ID = machineReadRegister(6); //descriptor del archivo a leer
 
+    int numBytes = 0;
+    char * temp;
+    temp = new char[tamano];
+
+    //printf("Tamaño del mensaje a leer: %i ID: %i\n", tamano, ID);
+
+    consola->P();
+    switch(ID){
+        case ConsoleInput:
+            scanf("%s", &mensajeLeido);
+            break;
+        case ConseOutput:
+            machine->WriteRegister(2, -1); //ver la vara xq hay q copiarlo a memoria de nachos xq no lo puede ver
+            printf("Leer desde la salida de consola no es posible. Eliminando programa");
+            break;
+        case ConsoleError:
+            printf("Error %d\n", machine->ReadRegister(4));
+            break;
+        default:
+            if(currentThread->tabla.isOpened(ID) != true){ //true es abierto
+                machine->WriteRegister(2, -1);
+            }
+            else{
+                int unitHandle = currentThread->tabla.getUnixHandle(ID);
+                numBytes = read(unixHandle, temp, tamano);
+                printf("Leyendo desde otro archivo:");
+            }
+    }
+    consola->V();
+    returnFromSystemCall();
 }
 
 void Nachos_Write() {
@@ -185,8 +220,9 @@ void Nachos_Write() {
         break;
     case  ConsoleOutput:
         buffer[ size ] = 0;
+        //strcpy(mensajeLeido, buffer);
         stats->numConsoleCharsWritten++;
-        printf( "%s \n", buffer );
+        printf( "%s \n", bufferString );
         break;
     case ConsoleError:
         printf( "%d\n", machine->ReadRegister( 4 ) );
@@ -205,8 +241,24 @@ void Nachos_Write() {
     returnFromSystemCall();
 }
 
-void Nachos_Close(){
+/**
+    System call encargado de cerrar o finalizar un archivo
+    que se encuentre abierto en el sistema NachOS. Esto lo
+    realiza leyendo del registro 6 para encontrar el ID
+    del mismo.
+**/
 
+void Nachos_Close(){
+    int lecturaRegistro = machine->ReadRegister(6);
+    int resultado = currentThread->tabla->Close(lecturaRegistro);                // Se obtiene el numero archivo deseado para eliminar
+    if(resultado < 0){                                    // Verificacion del cerrado del archivo en la tabla
+        perror("Error al proceder con el borrado del archivo");
+    }else{
+        resultado = close(tabla->getUnixHandle(lecturaRegistro));            // Close de Unix para el hilo actual
+        printf("Se ha cerrado el archivo correctamente");
+        currentThread->tabla->delThread();
+    }
+    returnFromSystemCall();
 }
 
 void Nachos_Fork() {    		// System call 9
