@@ -151,11 +151,6 @@ void Nachos_Open() {                    // System call 5
 
 }       // Nachos_Open
 
-
-void Nachos_Open(){
-
-}
-
 void Nachos_Read(){ //system call #7
     int direccionEnArchivo = machine->ReadRegister(4); //el archivo de donde se va a leer
     int tamano = machine->ReadRegister(5); // tamano de los que se va a leer
@@ -192,6 +187,7 @@ void Nachos_Read(){ //system call #7
             }
     }
     consola->V();
+    machine->WriteMem(direccionEnArchivo, tamano, temp); //escribe en memoria
     returnFromSystemCall();
 }
 
@@ -312,8 +308,14 @@ void NachosForkThread( int p ) {
 }
 
 
-void Nachos_Yield(){
+v/**
+    System call encargado de colocar el hilo actual en espera
+    y permitir al CPU que ejecute otros hilos en espera.
+**/
 
+void Nachos_Yield(){
+    currentThread->Yield();
+    returnFromSystemCall;
 }
 
 void Nachos_SemCreate(){
