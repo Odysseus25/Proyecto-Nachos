@@ -170,7 +170,8 @@ void Nachos_Read(){ //system call #7
     consola->P();
     switch(ID){
         case ConsoleInput:
-            scanf("%s", &mensajeLeido);
+            numBytes = read(1, temp, tamano);
+            machine->WriteRegister(2, numBytes);
             break;
         case ConseOutput:
             machine->WriteRegister(2, -1); //ver la vara xq hay q copiarlo a memoria de nachos xq no lo puede ver
@@ -186,7 +187,8 @@ void Nachos_Read(){ //system call #7
             else{
                 int unitHandle = currentThread->tabla.getUnixHandle(ID);
                 numBytes = read(unixHandle, temp, tamano);
-                printf("Leyendo desde otro archivo:");
+                //printf("Leyendo desde otro archivo:");
+                machine->WriteRegister(2, numBytes);
             }
     }
     consola->V();
